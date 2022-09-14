@@ -1,4 +1,4 @@
-# Ansbile playbook to deploy Castopod
+# Ansible playbook to deploy Castopod
 This playbook will deploy simple [Castopod](https://castopod.org/) on your server. 
 
 Tested on: 
@@ -17,7 +17,7 @@ Before downloading this playbook, make sure you have everything done in list bel
  1. A clean Debian or Ubuntu server, that is accessible from internet
  This playbook is designed to run on clean installations and may broke something on your server if it has some applications installed on it
  2. Ability to connect to your server with ssh key and run sudo without asking password 
- 3. Configured DNS record, that points toy your web server
+ 3. Configured DNS record, that points to your web server
  4. Installed ansible on machine, that will run this playbook
 
 ## Using this playbook
@@ -38,9 +38,9 @@ Simple instruction how to run this playbook:
  ```
 
 ## What to do next
-Open link `https://yourdomain/cp-login` and start using Castopod. It is good practise to secure you public facing server, but this is out of scope of this playbook (honestly, i'm just being lazy)
+Open link `https://yourdomain/cp-login` and start using Castopod. It is good practice to secure you public facing server, but this is out of scope of this playbook (honestly, i'm just being lazy)
 
-## Licence?
+## License?
 Nah, do whatever you want with this playbook. 
 
 ## Thanks
