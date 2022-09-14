@@ -1,7 +1,7 @@
 --- 
 all:
   hosts:
-    debian-10:
+    castopod:
       ansible_connection: ssh
       ansible_host: "127.0.0.1" #IP or FQDN of your server
       ansible_user: admin #Username used to connect to server
