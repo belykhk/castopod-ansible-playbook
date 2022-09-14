@@ -1,0 +1,277 @@
+# Information :
+#   This playbook will deploy current latest version of castopod on system.
+#   Probably it is good to run only on clean system. sicne it may broke smthng.
+#   For more information about castopod see https://castopod.org/
+#   Additional information about this playbook can be found at 
+#   https://github.com/belykhk/castopod-ansible-playbook 
+# Author :
+#   Kostya Belykh [k at belykh.su]
+# Tested systems:
+#   Debian: 10, 11
+#   Ubuntu: 18.04, 20.04, 22.04
+---
+# Play 1: Upgrade all installed packages
+- hosts: all
+
+  tasks:
+    - name: Upgrade all installed packages on APT-based systems
+      apt:
+        upgrade: yes
+        update_cache: yes
+        cache_valid_time: 86400 #One day
+      when: 
+        ansible_facts['pkg_mgr'] == "apt"
+
+# Play 2: Find current latest version of castopod release
+# Finding of this based on code from castopod devs: 
+# https://code.castopod.org/adaures/castopod.org/-/blob/main/scripts/generate_env.sh
+- hosts: localhost
+  connection: local
+  gather_facts: false
+
+  tasks:
+    - name: Find url of current castopod release
+      shell: |
+        RELEASE_URL="https://code.castopod.org/api/v4/projects/2/releases"
+        CASTOPOD_VERSION=$(echo $(curl --silent https://code.castopod.org/api/v4/projects/2/releases | jq '.[0] | .tag_name') | tr -d '"')
+        LATEST_RELEASE_URL="https://code.castopod.org/api/v4/projects/2/releases/${CASTOPOD_VERSION}"
+        echo $(echo $(curl --silent ${LATEST_RELEASE_URL} | jq '.assets.links[0].url') | tr -d '"')
+      register: castopodurl
+
+    - name: URL of castopod release will be used
+      debug:
+        var: castopodurl.stdout
+
+# Play 3: Deploy mysql server
+- hosts: all
+
+  vars:
+    mysql_root_password: '{{ castopod_db_root_password }}'
+    mysql_databases:
+      - name: castopod_db
+        encoding: utf8
+        collation: utf8_general_ci
+    mysql_users:
+      - name: castopod_user
+        host: "localhost"
+        password: '{{ castopod_db_user_password }}'
+        priv: "castopod_db.*:CREATE,ALTER,DELETE,EXECUTE,INDEX,INSERT,SELECT,UPDATE,REFERENCES,CREATE VIEW"
+    
+  roles:
+    - name: geerlingguy.mysql 
+
+# Play 4: Deploy php 8.1
+- hosts: all
+
+  vars:
+    php_version: '8.1'
+    php_packages:
+      - php8.1
+      - php8.1-cli
+      - php8.1-common
+      - php8.1-intl
+      - php8.1-curl
+      - php8.1-gd
+      - php8.1-xml
+      - php8.1-mysql
+      - php8.1-mbstring
+      - php8.1-apcu
+      - libapache2-mod-php8.1
+    php_packages_state: latest
+    php_enable_webserver: false
+    php_memory_limit: "512M"
+    php_max_execution_time: "120"
+    php_max_input_time: "120"
+    php_upload_max_filesize: "400M"
+    php_post_max_size: "64M"
+    
+  roles:
+    - name: geerlingguy.php-versions
+    - name: geerlingguy.php
+
+# Play 5: Deploy apache webserver
+- hosts: all
+
+  vars:
+    apache_listen_ip: "*"
+    apache_listen_port: 80
+    apache_remove_default_vhost: true
+    apache_mods_enabled:
+      - rewrite
+      - ssl
+      - php8.1
+      - mpm_prefork
+    apache_mods_disabled:
+      - mpm_worker
+      - mpm_event
+    apache_vhosts:
+      - servername: "{{ domain }}"
+        documentroot: "/var/www/html/castopod/public/"
+        extra_parameters: |
+          AddDefaultCharset UTF-8
+          ErrorLog ${APACHE_LOG_DIR}/castopod-error.log
+          CustomLog ${APACHE_LOG_DIR}/castopod-access.log combined
+    
+  roles:
+    - name: geerlingguy.apache
+
+  tasks: 
+  # For some bizzare reason apache2 not always load php8.1.conf file,
+  #  so we are forcing it to do manually
+  - name: Enable php8.1
+    shell: sudo a2enmod php8.1
+  
+  - name: Restart apache2
+    service:
+      name: apache2
+      state: restarted
+      enabled: yes
+
+# Play 6: Deploy and configure let's encrypt ssl certificate
+- hosts: all
+
+  vars:
+    certbot_package: "python3-certbot-apache"
+    certbot_plugin: "apache"
+
+  tasks:
+  - name : Install Python Package for Let's Encrypt
+    apt: 
+      name: python3 
+      update_cache: yes 
+      state: latest
+ 
+  - name : Install Let's Encrypt Package
+    apt: 
+      name: "{{ certbot_package }}"
+      update_cache: yes 
+      state: latest
+ 
+  - name: Create and Install Cert Using {{ certbot_plugin }} Plugin
+    shell: "certbot --{{ certbot_plugin }} -d {{ domain }} -m {{ leemail }} --agree-tos --noninteractive --redirect"
+ 
+  - name: Set Letsencrypt Cronjob for Certificate Auto Renewal
+    cron: 
+      name: letsencrypt_renewal 
+      special_time: monthly 
+      job: "/usr/bin/certbot renew"
+
+# Play 6: Download and configure castopod
+- hosts: all
+
+  tasks:
+  - name: Delete default apache welcome html
+    shell: /bin/rm -rf /var/www/html/*
+
+  - name: Download castopod files and unzip to webroot
+    unarchive:
+      src: "{{ hostvars['localhost']['castopodurl']['stdout'] }}"
+      dest: /var/www/html/
+      remote_src: yes
+  
+  - name: Create .env file
+    file: 
+      path: /var/www/html/castopod/.env
+      state: touch
+
+  - name: Generate random string to use in analytics salt
+    shell: openssl rand -hex 32
+    register: salt
+  
+  - name: Configure .env file
+    copy:
+      dest: /var/www/html/castopod/.env
+      content: |
+        app.baseURL="https://{{ domain }}/"
+        app.mediaBaseURL="https://{{ domain }}/"
+        admin.gateway="cp-admin"
+        auth.gateway="cp-auth"
+        database.default.hostname="localhost"
+        database.default.database="castopod_db"
+        database.default.username="castopod_user"
+        database.default.password="{{ castopod_db_user_password }}"
+        database.default.DBPrefix="cp_"
+        cache.handler="file"
+        analytics.salt="{{ salt.stdout }}"
+
+  - name: Set castopod folder to be owned by www-data
+    file:
+      path: /var/www/html/castopod
+      state: directory
+      recurse: yes
+      owner: www-data
+      group: www-data
+
+  - name: Copy CodeIgniter's spark to root of castopod deployment
+    copy:
+      src: /var/www/html/castopod/vendor/codeigniter4/framework/spark
+      dest: /var/www/html/castopod/spark
+      remote_src: yes
+
+  - name: Run database migrations
+    shell: php /var/www/html/castopod/spark migrate -all
+
+  - name: Seeding database with data
+    shell: php /var/www/html/castopod/spark AppSeeder
+
+  - name: Create superuser
+    shell: php /var/www/html/castopod/spark auth:create_user {{ castopod_username }} {{ castopod_email }}
+  
+  - name: Set superuser password
+    shell: php /var/www/html/castopod/spark auth:set_password {{ castopod_email }} {{ castopod_password }}
+
+  - name: Disable superuser flag to need to reset password
+    shell: sudo mysql -u root -p{{ castopod_db_root_password }} castopod_db -e 'UPDATE cp_users SET force_pass_reset = 0 WHERE username = "{{ castopod_username }}";'
+    ignore_errors: yes
+    # On some versions of mysql client this may throw error 'mysql: [Warning] Using a password on the command line interface can be insecure.' which is fine for our purpose
+
+  - name: Delete copied spark file
+    file:
+      path: /var/www/html/castopod/spark
+      state: absent
+
+  - name: Set castopod folder to be owned by root
+    file:
+      path: /var/www/html/castopod
+      state: directory
+      recurse: yes
+      owner: root
+      group: root
+
+  - name: Set castopod writable folder to be owned by www-data
+    file:
+      path: /var/www/html/castopod/writable
+      state: directory
+      recurse: yes
+      owner: www-data
+      group: www-data
+
+  - name: Set castopod public media folder to be owned by www-data
+    file:
+      path: /var/www/html/castopod/public/media
+      state: directory
+      recurse: yes
+      owner: www-data
+      group: www-data
+  
+  - name: Set cronjob for user www-data for social features
+    ansible.builtin.cron:
+      name: castopod social features
+      minute: "*"
+      hour: "*"
+      day: "*"
+      month: "*"
+      weekday: "*"
+      user: www-data
+      job: "php /var/www/html/castopod/public/index.php scheduled-activities"
+
+  - name: Set cronjob for user www-data for broadcast publications
+    ansible.builtin.cron:
+      name: castopod broadcast publications
+      minute: "*"
+      hour: "*"
+      day: "*"
+      month: "*"
+      weekday: "*"
+      user: www-data
+      job: "php /var/www/html/castopod/public/index.php scheduled-websub-publish"

@@ -1,0 +1,19 @@
+--- 
+all:
+  hosts:
+    debian-10:
+      ansible_connection: ssh
+      ansible_host: "127.0.0.1" #IP or FQDN of your server
+      ansible_user: admin #Username used to connect to server
+      ansible_python_interpreter: "/usr/bin/python3" #Path to python3 or python2
+      ansible_become: true
+      ansible_become_user: root
+      ansible_become_method: sudo
+      domain: podcast.domain.com #Domain name that will be used to open your website
+      leemail: admin@domain.com #This email will be used by let's encrypt to notify about expiration of your SSL certificate
+      castopod_db_root_password: super-secure-password #Mysql root password that will be set
+      castopod_db_user_password: similarly-secure-password #Mysql castopod user password that will be set
+      castopod_username: superadmin #Username of superuser in Castopod web UI
+      castopod_email: castopod@domain.com #Email of superuser in Castopod web UI
+      castopod_password: another-secure-password #Password of superuser in Castopod web UI
+      php_date_timezone: Europe/Amsterdam #Time zone of server. See https://www.php.net/manual/en/timezones.php 
