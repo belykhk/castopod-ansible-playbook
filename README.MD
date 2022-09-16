@@ -18,7 +18,7 @@ Before downloading this playbook, make sure you have everything done in list bel
  This playbook is designed to run on clean installations and may broke something on your server if it has some applications installed on it
  2. Ability to connect to your server with ssh key and run sudo without asking password 
  3. Configured DNS record, that points to your web server
- 4. Installed ansible on machine, that will run this playbook
+ 4. Installed `ansible` and `jq` on machine, that will run this playbook
 
 ## Using this playbook
 Simple instruction how to run this playbook:
