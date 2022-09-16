@@ -156,7 +156,7 @@
       special_time: monthly 
       job: "/usr/bin/certbot renew"
 
-# Play 6: Download and configure castopod
+# Play 7: Download and configure castopod
 - hosts: all
 
   tasks:
