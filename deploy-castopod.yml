@@ -35,7 +35,7 @@
         RELEASE_URL="https://code.castopod.org/api/v4/projects/2/releases"
         CASTOPOD_VERSION=$(echo $(curl --silent https://code.castopod.org/api/v4/projects/2/releases | jq '.[0] | .tag_name') | tr -d '"')
         LATEST_RELEASE_URL="https://code.castopod.org/api/v4/projects/2/releases/${CASTOPOD_VERSION}"
-        echo $(echo $(curl --silent ${LATEST_RELEASE_URL} | jq '.assets.links[0].url') | tr -d '"')
+        echo $(echo $(curl --silent ${LATEST_RELEASE_URL} | jq '.assets.links[].url' | grep -e '.tar.gz' | tr -d '"')
       register: castopodurl
 
     - name: URL of castopod release will be used
