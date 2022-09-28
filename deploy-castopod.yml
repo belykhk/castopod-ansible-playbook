@@ -202,12 +202,6 @@
       owner: www-data
       group: www-data
 
-  - name: Copy CodeIgniter's spark to root of castopod deployment
-    copy:
-      src: /var/www/html/castopod/vendor/codeigniter4/framework/spark
-      dest: /var/www/html/castopod/spark
-      remote_src: yes
-
   - name: Run database migrations
     shell: php /var/www/html/castopod/spark migrate -all
 
@@ -224,11 +218,6 @@
     shell: sudo mysql -u root -p{{ castopod_db_root_password }} castopod_db -e 'UPDATE cp_users SET force_pass_reset = 0 WHERE username = "{{ castopod_username }}";'
     ignore_errors: yes
     # On some versions of mysql client this may throw error 'mysql: [Warning] Using a password on the command line interface can be insecure.' which is fine for our purpose
-
-  - name: Delete copied spark file
-    file:
-      path: /var/www/html/castopod/spark
-      state: absent
 
   - name: Set castopod folder to be owned by root
     file:
