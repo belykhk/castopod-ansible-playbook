@@ -193,6 +193,13 @@
         database.default.DBPrefix="cp_"
         cache.handler="file"
         analytics.salt="{{ salt.stdout }}"
+        email.fromEmail="{{ castopod_smtp_fromEmail }}"
+        email.fromName="{{ castopod_smtp_fromName }}"
+        email.SMTPHost="{{ castopod_smtp_SMTPHost }}"
+        email.SMTPUser="{{ castopod_smtp_SMTPUser }}"
+        email.SMTPPass="{{ castopod_smtp_SMTPPass }}"
+        email.SMTPPort={{ castopod_smtp_SMTPPort }}
+        email.SMTPCrypto="{{ castopod_smtp_SMTPCrypto }}"
 
   - name: Set castopod folder to be owned by www-data
     file:

@@ -16,4 +16,11 @@ all:
       castopod_username: superadmin #Username of superuser in Castopod web UI
       castopod_email: castopod@domain.com #Email of superuser in Castopod web UI
       castopod_password: another-secure-password #Password of superuser in Castopod web UI
+      castopod_smtp_fromEmail: email@example.com #Email address used to send mails from castopod
+      castopod_smtp_fromName: Castopod #Display name of email sender
+      castopod_smtp_SMTPHost: smtp.example.com #Email server
+      castopod_smtp_SMTPUser: username #Email username
+      castopod_smtp_SMTPPass: password #Email password
+      castopod_smtp_SMTPPort: 25 #Server port
+      castopod_smtp_SMTPCrypto: tls #Server encryption. May be tls or ssl
       php_date_timezone: Europe/Amsterdam #Time zone of server. See https://www.php.net/manual/en/timezones.php 
