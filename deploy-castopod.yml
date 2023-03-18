@@ -183,7 +183,7 @@
       dest: /var/www/html/castopod/.env
       content: |
         app.baseURL="https://{{ domain }}/"
-        app.mediaBaseURL="https://{{ domain }}/"
+        media.baseURL="https://{{ domain }}/"
         admin.gateway="cp-admin"
         auth.gateway="cp-auth"
         database.default.hostname="localhost"
