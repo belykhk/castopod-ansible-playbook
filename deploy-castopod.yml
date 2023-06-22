@@ -249,19 +249,8 @@
       recurse: yes
       owner: www-data
       group: www-data
-  
-  - name: Set cronjob for user www-data for social features
-    ansible.builtin.cron:
-      name: castopod social features
-      minute: "*"
-      hour: "*"
-      day: "*"
-      month: "*"
-      weekday: "*"
-      user: www-data
-      job: "php /var/www/html/castopod/public/index.php scheduled-activities"
 
-  - name: Set cronjob for user www-data for broadcast publications
+  - name: Set cronjob for user www-data 
     ansible.builtin.cron:
       name: castopod broadcast publications
       minute: "*"
@@ -270,4 +259,4 @@
       month: "*"
       weekday: "*"
       user: www-data
-      job: "php /var/www/html/castopod/public/index.php scheduled-websub-publish"
+      job: "php /var/www/html/castopod/spark tasks:run >> /dev/null 2>&1"
